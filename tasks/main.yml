@@ -1,0 +1,38 @@
+---
+# Create the Tasks directories
+#
+
+- name: Create CentOS Task directories
+  file:
+    path: /opt/puppetlabs/server/apps/razor-server/share/razor-server/tasks/centos/{{ item.major }}.task
+    state: directory
+  loop: "{{ centos_versions }}"
+  tags:
+    - centos_tasks
+
+# Create CentOS Tasks
+
+- name: Create a CentOS Task Kickstart
+  copy:
+    src: files/kickstart_centos.erb
+    dest: /opt/puppetlabs/server/apps/razor-server/share/razor-server/tasks/centos/{{ item.major }}.task/kickstart.erb
+  loop: "{{ centos_versions }}"
+  tags:
+    - tasks
+
+- name: Create CentOS Task metadata
+  template:
+    src: templates/centos_metadata.yaml.j2
+    dest: /opt/puppetlabs/server/apps/razor-server/share/razor-server/tasks/centos/{{ item.major }}.task/metadata.yaml
+  loop: "{{ centos_versions }}"
+  tags:
+    - tasks
+
+# Setup the CentOS Repos
+#
+
+- name: Create CentOS Repos
+  shell: "/usr/local/bin/razor create-repo --name {{ item.build }} --iso-url {{ item.url }} --task centos/{{ item.major }}"
+  loop: "{{ centos_versions }}"
+  tags:
+    - centos_repos

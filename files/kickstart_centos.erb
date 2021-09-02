@@ -1,0 +1,86 @@
+#version=EL7/8
+install
+url --url=<%= repo_url %>
+cmdline
+
+# Disk configuration
+clearpart --all --initlabel
+ignoredisk --only-use=sda
+autopart --type=lvm
+
+# Bootloader
+bootloader --location=mbr --append="crashkernel=auto"
+
+# Keyboard layouts
+keyboard --vckeymap=gb --xlayouts='gb'
+
+# System language
+lang en_GB.UTF-8
+
+# Network configuration
+network --activate --bootproto=static --device=<%= node.metadata['mgmt_nic'] %> --ip=<%= node.metadata['ipaddress'] %> --netmask=<%= node.metadata['netmask'] %> --hostname=<%= node.hostname %> --nameserver=<%= node.metadata['dns1'] %>,<%= node.metadata['dns2'] %> --gateway=<%= node.metadata['gateway'] %> --hostname <%= node.metadata['hostname'] || node.hostname %>
+
+# Root password
+rootpw '<%= node.metadata['root_password'] || node.root_password %>'
+
+# User
+user --groups=wheel --name=<%= node.metadata['user_name'] %> --password='<%= node.metadata['user_password'] || node.user_password %>' --gecos='<%= node.metadata['user_name'] %>'
+
+# Run the Setup Agent on first boot
+firstboot --enable
+
+# Do not configure the X Window System
+skipx
+
+# System services
+services --enabled="chronyd"
+
+# System timezone
+timezone --utc <%= node.metadata['timezone'] || 'Europe/London' %>
+
+# Firewall
+firewall --enabled --ssh
+
+# EULA
+eula --agreed
+
+# Reboot automatically
+reboot
+
+# Packages
+%packages
+@core
+#@^server-product-environment
+#@development
+#kexec-tools
+%end
+
+%addon com_redhat_kdump --enable --reserve-mb='auto'
+
+%end
+
+%anaconda
+pwpolicy root --minlen=6 --minquality=1 --notstrict --nochanges --notempty
+pwpolicy user --minlen=6 --minquality=1 --notstrict --nochanges --emptyok
+pwpolicy luks --minlen=6 --minquality=1 --notstrict --nochanges --notempty
+%end
+
+%post --log=/var/log/razor.log
+echo Kickstart post
+
+echo <%= node.metadata['ipaddress'] %>  <%= node.hostname %> <%= node.shortname %> >> /etc/hosts
+
+curl -s -o /root/razor_postinstall.sh <%= file_url("post_install") %>
+
+# Run razor_postinstall.sh on next boot via rc.local
+if [ ! -f /etc/rc.d/rc.local ]; then
+  # On systems using systemd /etc/rc.d/rc.local does not exist at all
+  # though systemd is set up to run the file if it exists
+  echo '#!/bin/bash' > /etc/rc.d/rc.local
+fi
+chmod a+x /etc/rc.d/rc.local
+echo bash /root/razor_postinstall.sh >> /etc/rc.d/rc.local
+chmod +x /root/razor_postinstall.sh
+
+curl -s <%= stage_done_url("kickstart") %>
+%end

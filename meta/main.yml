@@ -1,0 +1,21 @@
+galaxy_info:
+  author: Nicholas Rodriguez
+  description: Ansible role to configure CentOS Tasks for Puppet Razor
+  license: MIT
+  min_ansible_version: 2.9
+  platforms:
+   - name: EL
+     versions:
+     - 8
+     - 7
+  galaxy_tags:
+     - puppet
+     - puppetlabs
+     - razor
+     - baremetal
+     - provisioning
+     - esxi
+     - kickstart
+     - centos
+     - os
+dependencies: []
